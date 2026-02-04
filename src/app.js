@@ -64,7 +64,6 @@ app.delete("/user", async (req,res) =>{
 //update data of the user
 app.patch("/user/:userId", async (req,res) =>{
     const userId = req.params?.userId;
-    console.log("UserId is",userId); 
         const data = req.body;
     try{
         const ALLOWED_UPDATES = [

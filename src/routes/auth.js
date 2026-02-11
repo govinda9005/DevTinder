@@ -2,6 +2,7 @@ const express = require("express");
 const { validateSignUpData } = require("../utils/validation");
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const authRouter = express.Router();
 
 authRouter.post("/signup", async (req, res) => {
@@ -72,6 +73,58 @@ authRouter.post("/logout", async (req, res) => {
       expires: new Date(Date.now()),
     });
     res.send("Logout successful!!");
+  } catch (err) {
+    res.status(400).send("ERROR: " + err.message);
+  }
+});
+
+authRouter.post("/forgot-password", async (req, res) => {
+  try {
+    const { emailId } = req.body;
+
+    const user = await User.findOne({ emailId });
+    if (!user) {
+      return res.status(400).send("User not found");
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    await user.save();
+
+    // Normally you send email here
+    res.send(`Reset link: http://localhost:3000/reset-password/${resetToken}`);
+  } catch (err) {
+    res.status(400).send("ERROR: " + err.message);
+  }
+});
+
+authRouter.patch("/reset-password/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { newPassword } = req.body;
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).send("Invalid or expired token");
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+
+    await user.save();
+
+    res.send("Password reset successful!");
   } catch (err) {
     res.status(400).send("ERROR: " + err.message);
   }

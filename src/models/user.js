@@ -43,7 +43,7 @@ const userSchema = new mongoose.Schema(
     gender: {
       type: String,
       validate(value) {
-        if (!["male", "female", " others"].includes(value)) {
+        if (!["male", "female", "others"].includes(value)) {
           throw new Error("Gender data is not valid");
         }
       },
@@ -70,6 +70,15 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+userSchema.index({ firstName: 1, lastName: 1 });
+
+userSchema.pre("save", async function () {
+  const user = this;
+  if (user.isModified("password")) {
+    user.password = await bcrypt.hash(user.password, 10);
+  }
+});
 
 userSchema.methods.getJWT = async function () {
   const user = this;

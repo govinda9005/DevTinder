@@ -11,14 +11,13 @@ authRouter.post("/signup", async (req, res) => {
     const { firstName, lastName, emailId, password } = req.body;
 
     //Hash password before saving to database
-    const passwordHash = await bcrypt.hash(password, 10);
 
     //creating user object and saving to database
     const user = new User({
       firstName,
       lastName,
       emailId,
-      password: passwordHash,
+      password,
     });
 
     await user.save();
@@ -40,14 +39,18 @@ authRouter.post("/signup", async (req, res) => {
 
 authRouter.post("/login", async (req, res) => {
   try {
+    //console.log("Login request body:", req.body); // Debug log
     const { emailId, password } = req.body;
 
     const user = await User.findOne({ emailId: emailId });
+    //console.log("User found:", user);
+
     if (!user) {
       throw new Error("Invalid credentials");
     }
 
     const isPasswordValid = await user.validatePassword(password);
+    //console.log("Is password valid?", isPasswordValid);
 
     if (isPasswordValid) {
       const token = await user.getJWT();
